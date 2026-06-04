@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>공고분석 트래커</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ===== CSS 변수 ===== */
+    :root {
+      --green-1: #2d6a2d;
+      --green-2: #3a8a3a;
+      --green-3: #4caf50;
+      --green-4: #7ecb7e;
+      --green-5: #b8e6b8;
+      --green-6: #d8f5d8;
+      --green-7: #f0faf0;
+      --green-8: #e8f5e9;
+      --white: #ffffff;
+      --text-dark: #1a3a1a;
+      --text-mid: #3a6b3a;
+      --text-sub: #6b9b6b;
+      --border: rgba(74, 140, 74, 0.25);
+      --card-shadow: 0 4px 20px rgba(0, 100, 0, 0.10);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 20%, #b9f0b9 40%, #e8f5e9 60%, #f1faf1 80%, #c8e6c9 100%);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 28px 20px;
+    }
+
+    /* ===== 메인 컨테이너 ===== */
+    .app-container {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(255, 255, 255, 0.35);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: 28px;
+      border: 1.5px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 8px 40px rgba(30, 100, 30, 0.13), 0 2px 10px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+
+    /* ===== 헤더 ===== */
+    .app-header {
+      background: linear-gradient(120deg, #a5d6a7 0%, #c8e6c9 40%, #e0f2e0 70%, #f0faf0 100%);
+      padding: 22px 32px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1.5px solid rgba(255,255,255,0.5);
+      position: relative;
+      overflow: hidden;
+    }
+    .app-header::after {
+      content: '';
+      position: absolute;
+      right: -40px; top: -40px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(255,255,255,0.45) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .header-icon {
+      font-size: 48px;
+      filter: drop-shadow(0 2px 6px rgba(0,80,0,0.18));
+    }
+    .header-title {
+      font-size: 30px;
+      font-weight: 800;
+      color: var(--text-dark);
+      letter-spacing: -0.5px;
+    }
+
+    /* ===== 바디 (좌+우 2컬럼) ===== */
+    .app-body {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      min-height: 580px;
+    }
+
+    /* ===== 좌측 공고분석 영역 ===== */
+    .main-panel {
+      padding: 28px 28px 28px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border-right: 1.5px solid rgba(255,255,255,0.5);
+    }
+
+    .section-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+
+    /* 입력 텍스트에어리어 */
+    .input-box {
+      background: rgba(255,255,255,0.82);
+      border: 1.5px solid rgba(255,255,255,0.9);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      min-height: 120px;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px;
+      color: var(--text-dark);
+      resize: vertical;
+      width: 100%;
+      outline: none;
+      box-shadow: 0 2px 12px rgba(0,80,0,0.06), inset 0 1px 3px rgba(255,255,255,0.7);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      line-height: 1.7;
+    }
+    .input-box:focus {
+      border-color: var(--green-3);
+      box-shadow: 0 0 0 3px rgba(76,175,80,0.15), 0 2px 12px rgba(0,80,0,0.08);
+    }
+    .input-box::placeholder { color: #aaa; }
+
+    /* 분석 버튼 */
+    .analyze-btn {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--green-2), var(--green-1));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(30,100,30,0.25);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .analyze-btn:hover {
+      background: linear-gradient(135deg, var(--green-3), var(--green-2));
+      box-shadow: 0 6px 18px rgba(30,100,30,0.32);
+      transform: translateY(-1px);
+    }
+    .analyze-btn:active { transform: translateY(0); }
+
+    /* 분석 결과 박스 */
+    .result-box {
+      background: rgba(255,255,255,0.75);
+      border: 1.5px solid rgba(255,255,255,0.9);
+      border-radius: var(--radius-md);
+      padding: 18px 18px;
+      min-height: 280px;
+      box-shadow: 0 2px 12px rgba(0,80,0,0.06), inset 0 1px 3px rgba(255,255,255,0.6);
+      flex: 1;
+      overflow-y: auto;
+    }
+    .result-box-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+    }
+
+    /* 결과 내용 (분석 후) */
+    .result-empty {
+      color: #aaa;
+      font-size: 13px;
+      padding-top: 6px;
+    }
+    .result-section { margin-bottom: 16px; }
+    .result-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 7px; }
+    .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .tag-required { background: #d8f0d8; color: #2a6a2a; }
+    .tag-preferred { background: #fef3c7; color: #92400e; }
+    .tag-role { background: #e0e7ff; color: #3730a3; }
+    .tag-top { background: #fee2e2; color: #991b1b; }
+
+    .study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .study-table th {
+      font-size: 11px;
+      color: var(--text-sub);
+      text-align: left;
+      padding: 4px 8px 8px;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(0,100,0,0.12);
+    }
+    .study-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid rgba(0,100,0,0.07);
+      color: var(--text-dark);
+    }
+    .level-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .level-입문 { background: #d8f0d8; color: #2a6a2a; }
+    .level-중급 { background: #fef3c7; color: #92400e; }
+    .level-심화 { background: #fee2e2; color: #991b1b; }
+
+    .fit-section {
+      background: rgba(255,255,255,0.6);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 4px;
+    }
+    .fit-input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .fit-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1.5px solid rgba(76,175,80,0.3);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: 'Noto Sans KR', sans-serif;
+      outline: none;
+      background: rgba(255,255,255,0.9);
+    }
+    .fit-input:focus { border-color: var(--green-3); }
+    .fit-btn {
+      background: var(--green-2);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .fit-btn:hover { background: var(--green-3); }
+
+    .fit-result { margin-top: 4px; }
+    .fit-bar-wrap {
+      background: rgba(0,100,0,0.1);
+      border-radius: 99px;
+      height: 8px;
+      overflow: hidden;
+      margin: 6px 0 12px;
+    }
+    .fit-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.5s ease;
+    }
+    .reason-text {
+      font-size: 12px;
+      color: var(--text-sub);
+      line-height: 1.7;
+      margin-top: 4px;
+    }
+
+    /* ===== 우측 마이페이지 패널 ===== */
+    .side-panel {
+      background: rgba(255,255,255,0.22);
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .side-panel-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-dark);
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    /* 마감 임박 알림 */
+    .deadline-section { }
+    .side-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-mid);
+      margin-bottom: 8px;
+      letter-spacing: -0.1px;
+    }
+    .deadline-list { display: flex; flex-direction: column; gap: 6px; }
+    .deadline-item {
+      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(255,255,255,0.8);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 5px rgba(0,80,0,0.06);
+    }
+    .deadline-dday {
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+    .dday-urgent { background: #fee2e2; color: #dc2626; }
+    .dday-warn { background: #fef3c7; color: #d97706; }
+    .dday-safe { background: #d8f0d8; color: #16a34a; }
+
+    /* 즐겨찾기 */
+    .fav-item {
+      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(255,255,255,0.8);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 12px;
+      color: var(--text-dark);
+      box-shadow: 0 1px 5px rgba(0,80,0,0.06);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .fav-star { font-size: 13px; }
+    .fav-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* 캘린더 버튼 */
+    .calendar-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--green-2), var(--green-1));
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 18px 14px;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(30,100,30,0.28);
+      transition: all 0.2s;
+      line-height: 1.5;
+    }
+    .calendar-btn:hover {
+      box-shadow: 0 6px 20px rgba(30,100,30,0.36);
+      transform: translateY(-1px);
+    }
+    .calendar-btn .cal-sub {
+      font-size: 11px;
+      opacity: 0.8;
+      font-weight: 400;
+      display: block;
+      margin-top: 3px;
+    }
+
+    /* 소형 네비 */
+    .mini-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: auto;
+    }
+    .mini-nav-btn {
+      background: rgba(255,255,255,0.55);
+      border: 1px solid rgba(255,255,255,0.75);
+      border-radius: 9px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-mid);
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      text-align: left;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .mini-nav-btn:hover {
+      background: rgba(255,255,255,0.82);
+      color: var(--green-1);
+    }
+    .mini-nav-btn.active {
+      background: rgba(76,175,80,0.18);
+      border-color: rgba(76,175,80,0.35);
+      color: var(--green-1);
+    }
+
+    /* 토스트 */
+    .toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      background: #1e3a1e;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.25s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* 로딩 스피너 */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 반응형 */
+    @media (max-width: 680px) {
+      .app-body { grid-template-columns: 1fr; }
+      .side-panel { border-top: 1.5px solid rgba(255,255,255,0.5); }
+      .main-panel { padding: 20px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- 헤더 -->
+  <header class="app-header">
+    <div class="header-icon">🔍</div>
+    <div class="header-title">공고분석</div>
+  </header>
+
+  <!-- 바디 -->
+  <div class="app-body">
+
+    <!-- 좌측: 공고분석 메인 -->
+    <div class="main-panel">
+
+      <!-- 입력 -->
+      <div>
+        <div class="section-label">분석할 내용을 넣어주세요.</div>
+        <textarea id="jobInput" class="input-box"
+          placeholder="공고 내용을 붙여넣거나 직접 입력하세요.&#10;기술 스택, 우대 조건 등을 포함하면 분석 정확도가 높아집니다.&#10;&#10;예) Java Spring Boot를 활용한 백엔드 API 개발. REST API 설계, MySQL DB, Git 협업. AWS 경험자 우대."></textarea>
+        <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+          <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+            <span id="btnText">🔍 분석하기</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 분석 결과 -->
+      <div class="result-box">
+        <div class="result-box-title">분석결과</div>
+        <div id="analysisResult">
+          <div class="result-empty">공고 내용을 입력한 후 분석하기 버튼을 눌러주세요.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 우측: 마이페이지 패널 -->
+    <div class="side-panel">
+
+      <div class="side-panel-title">마이 페이지</div>
+
+      <!-- 마감 임박 알림 -->
+      <div class="deadline-section">
+        <div class="side-section-title">마감임박알림</div>
+        <div class="deadline-list" id="deadlineList">
+          <!-- JS로 채움 -->
+        </div>
+      </div>
+
+      <!-- 즐겨찾기 -->
+      <div>
+        <div class="side-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+          즐겨찾기
+          <span style="font-size:11px;color:var(--text-sub);cursor:pointer;" onclick="showPage('list')">전체 &rsaquo;</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;" id="favList">
+          <!-- JS로 채움 -->
+        </div>
+      </div>
+
+      <!-- 캘린더 -->
+      <div>
+        <div class="side-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+          캘린더
+          <span style="font-size:11px;color:var(--text-sub);cursor:pointer;" onclick="showPage('calendar')">전체 &rsaquo;</span>
+        </div>
+        <button class="calendar-btn" onclick="showPage('calendar')">
+          📅 캘린더 보기
+          <span class="cal-sub">공고 접수 일정 확인</span>
+        </button>
+      </div>
+
+      <!-- 미니 네비 -->
+      <div class="mini-nav">
+        <button class="mini-nav-btn active" onclick="showPage('analyzer')">🔍 공고분석</button>
+        <button class="mini-nav-btn" onclick="showPage('dashboard')">🏠 대시보드</button>
+        <button class="mini-nav-btn" onclick="showPage('register')">➕ 공고 등록</button>
+        <button class="mini-nav-btn" onclick="showPage('list')">📄 공고 목록</button>
+        <button class="mini-nav-btn" onclick="showPage('stats')">📊 통계</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========== Storage ========== */
+const Storage = {
+  getJobs() { return JSON.parse(localStorage.getItem('jobs') || '[]'); },
+  saveJob(job) {
+    const jobs = this.getJobs();
+    job.id = Date.now().toString();
+    job.createdAt = new Date().toISOString();
+    job.favorite = false;
+    job.applyStatus = '관심 있음';
+    job.analysis = null;
+    jobs.push(job);
+    localStorage.setItem('jobs', JSON.stringify(jobs));
+    return job;
+  },
+  updateJob(id, updates) {
+    const jobs = this.getJobs();
+    const idx = jobs.findIndex(j => j.id === id);
+    if (idx === -1) return null;
+    jobs[idx] = { ...jobs[idx], ...updates };
+    localStorage.setItem('jobs', JSON.stringify(jobs));
+    return jobs[idx];
+  },
+  getJob(id) { return this.getJobs().find(j => j.id === id) || null; },
+  getFavorites() { return this.getJobs().filter(j => j.favorite); },
+  saveAnalysis(jobId, analysis) {
+    this.updateJob(jobId, { analysis });
+    const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+    history.unshift({ jobId, analysis, analyzedAt: new Date().toISOString() });
+    localStorage.setItem('analysisHistory', JSON.stringify(history.slice(0, 20)));
+  },
+  insertSampleData() {
+    if (this.getJobs().length > 0) return;
+    const today = new Date();
+    const fmt = d => d.toISOString().split('T')[0];
+    const add = n => { const d = new Date(today); d.setDate(d.getDate() + n); return d; };
+    const samples = [
+      { title: '2025 상반기 SW 개발 인턴', company: '삼성전자', industry: 'IT', role: '백엔드', description: 'Java Spring Boot REST API. MySQL Git. AWS 우대. Docker.', startDate: fmt(add(-5)), endDate: fmt(add(3)), applyStatus: '준비 중', favorite: true },
+      { title: '데이터 분석 인턴십', company: '카카오', industry: 'IT', role: '데이터', description: 'Python pandas numpy SQL 머신러닝 우대 Linux.', startDate: fmt(add(2)), endDate: fmt(add(6)), applyStatus: '관심 있음', favorite: true },
+      { title: '2025 공채 신입', company: '한화시스템', industry: '방산', role: '임베디드', description: 'C/C++ 임베디드. 네트워크 Linux. 보안 우대.', startDate: fmt(add(-20)), endDate: fmt(add(1)), applyStatus: '지원 예정', favorite: false },
+      { title: '금융 IT 개발자', company: '신한금융', industry: '금융', role: '풀스택', description: 'JavaScript React Node.js Oracle. 정보처리기사 우대.', startDate: fmt(add(-30)), endDate: fmt(add(-5)), applyStatus: '지원 완료', favorite: false },
+    ];
+    samples.forEach(s => {
+      const job = { ...s, id: Date.now().toString() + Math.random().toString(36).slice(2,5), createdAt: new Date().toISOString(), analysis: null };
+      const jobs = this.getJobs(); jobs.push(job); localStorage.setItem('jobs', JSON.stringify(jobs));
+    });
+  }
+};
+
+/* ========== Analyzer ========== */
+const Analyzer = {
+  SKILL_DB: [
+    { pattern: /python/i, name: 'Python', cat: '언어', level: '입문', desc: '데이터 분석, AI/ML에 가장 많이 쓰이는 언어' },
+    { pattern: /java(?!script)/i, name: 'Java', cat: '언어', level: '중급', desc: '백엔드 개발, 기업 시스템에 널리 사용' },
+    { pattern: /javascript|js/i, name: 'JavaScript', cat: '언어', level: '입문', desc: '웹 프론트엔드 기본 언어' },
+    { pattern: /typescript/i, name: 'TypeScript', cat: '언어', level: '중급', desc: 'JS의 타입 안정성 강화 버전' },
+    { pattern: /c\+\+/i, name: 'C++', cat: '언어', level: '중급', desc: '임베디드, 시스템, 게임 개발' },
+    { pattern: /\bc\b/i, name: 'C', cat: '언어', level: '중급', desc: '임베디드, 시스템 프로그래밍' },
+    { pattern: /kotlin/i, name: 'Kotlin', cat: '언어', level: '중급', desc: '안드로이드 앱 개발' },
+    { pattern: /swift/i, name: 'Swift', cat: '언어', level: '중급', desc: 'iOS 앱 개발' },
+    { pattern: /golang|go\b/i, name: 'Go', cat: '언어', level: '중급', desc: '고성능 백엔드, 마이크로서비스' },
+    { pattern: /rust/i, name: 'Rust', cat: '언어', level: '심화', desc: '시스템 프로그래밍, 안전한 메모리 관리' },
+    { pattern: /spring|spring boot/i, name: 'Spring Boot', cat: '프레임워크', level: '중급', desc: 'Java 백엔드 표준 프레임워크' },
+    { pattern: /react/i, name: 'React', cat: '프레임워크', level: '입문', desc: '페이스북이 만든 UI 라이브러리' },
+    { pattern: /vue/i, name: 'Vue.js', cat: '프레임워크', level: '입문', desc: '쉽게 배울 수 있는 프론트엔드 프레임워크' },
+    { pattern: /angular/i, name: 'Angular', cat: '프레임워크', level: '중급', desc: '구글의 대규모 프론트엔드 프레임워크' },
+    { pattern: /django/i, name: 'Django', cat: '프레임워크', level: '중급', desc: 'Python 백엔드 프레임워크' },
+    { pattern: /flask/i, name: 'Flask', cat: '프레임워크', level: '입문', desc: 'Python 경량 웹 프레임워크' },
+    { pattern: /fastapi/i, name: 'FastAPI', cat: '프레임워크', level: '중급', desc: 'Python 고성능 API 프레임워크' },
+    { pattern: /node\.?js/i, name: 'Node.js', cat: '프레임워크', level: '중급', desc: 'JavaScript 백엔드 런타임' },
+    { pattern: /mysql/i, name: 'MySQL', cat: 'DB', level: '입문', desc: '오픈소스 관계형 DB' },
+    { pattern: /postgresql|postgres/i, name: 'PostgreSQL', cat: 'DB', level: '중급', desc: '고성능 오픈소스 관계형 DB' },
+    { pattern: /oracle/i, name: 'Oracle DB', cat: 'DB', level: '중급', desc: '기업 표준 상용 DB' },
+    { pattern: /mongodb/i, name: 'MongoDB', cat: 'DB', level: '중급', desc: 'NoSQL 문서형 DB' },
+    { pattern: /redis/i, name: 'Redis', cat: 'DB', level: '중급', desc: '인메모리 캐시 DB' },
+    { pattern: /\bsql\b/i, name: 'SQL', cat: 'DB', level: '입문', desc: '관계형 DB 쿼리 언어' },
+    { pattern: /git/i, name: 'Git', cat: 'DevOps', level: '입문', desc: '버전 관리 시스템, 협업 필수' },
+    { pattern: /docker/i, name: 'Docker', cat: 'DevOps', level: '중급', desc: '컨테이너 기반 개발환경 관리' },
+    { pattern: /kubernetes|k8s/i, name: 'Kubernetes', cat: 'DevOps', level: '심화', desc: '컨테이너 오케스트레이션' },
+    { pattern: /aws/i, name: 'AWS', cat: 'DevOps', level: '중급', desc: '아마존 클라우드 서비스' },
+    { pattern: /azure/i, name: 'Azure', cat: 'DevOps', level: '중급', desc: '마이크로소프트 클라우드 서비스' },
+    { pattern: /gcp|google cloud/i, name: 'GCP', cat: 'DevOps', level: '중급', desc: '구글 클라우드 서비스' },
+    { pattern: /linux/i, name: 'Linux', cat: 'DevOps', level: '중급', desc: '서버 운영체제 기본' },
+    { pattern: /ci\/cd|cicd|jenkins/i, name: 'CI/CD', cat: 'DevOps', level: '중급', desc: '자동화 배포 파이프라인' },
+    { pattern: /tensorflow/i, name: 'TensorFlow', cat: 'AI/ML', level: '중급', desc: '구글의 딥러닝 프레임워크' },
+    { pattern: /pytorch/i, name: 'PyTorch', cat: 'AI/ML', level: '중급', desc: '연구자들이 선호하는 딥러닝 프레임워크' },
+    { pattern: /pandas/i, name: 'Pandas', cat: 'AI/ML', level: '입문', desc: 'Python 데이터 분석 라이브러리' },
+    { pattern: /numpy/i, name: 'NumPy', cat: 'AI/ML', level: '입문', desc: 'Python 수치 계산 라이브러리' },
+    { pattern: /머신러닝|machine learning/i, name: '머신러닝', cat: 'AI/ML', level: '중급', desc: '데이터 기반 예측 모델' },
+    { pattern: /딥러닝|deep learning/i, name: '딥러닝', cat: 'AI/ML', level: '심화', desc: '인공신경망 기반 학습' },
+    { pattern: /rest api|restful/i, name: 'REST API', cat: '기타', level: '입문', desc: '웹 서비스 통신 방식' },
+    { pattern: /agile|scrum/i, name: 'Agile/Scrum', cat: '기타', level: '입문', desc: '애자일 개발 방법론' },
+    { pattern: /네트워크|network/i, name: '네트워크', cat: '기타', level: '중급', desc: 'TCP/IP, HTTP 등 통신 개념' },
+    { pattern: /보안|security/i, name: '보안', cat: '기타', level: '중급', desc: '사이버 보안 기초' },
+    { pattern: /정보처리기사/i, name: '정보처리기사', cat: '자격증', level: '입문', desc: '국가공인 IT 기본 자격증' },
+  ],
+  PREFERRED_HINTS: /우대|preferred|plus|bonus|있으면 좋은/i,
+  ROLE_KEYWORDS: [
+    { pattern: /백엔드|back.?end|서버/i, role: '백엔드 개발' },
+    { pattern: /프론트엔드|front.?end|UI/i, role: '프론트엔드 개발' },
+    { pattern: /풀스택|full.?stack/i, role: '풀스택 개발' },
+    { pattern: /데이터 분석|data anal/i, role: '데이터 분석' },
+    { pattern: /머신러닝|AI 개발|딥러닝/i, role: 'AI/ML 엔지니어링' },
+    { pattern: /임베디드|embedded/i, role: '임베디드 개발' },
+    { pattern: /시스템|system.{0,6}engi/i, role: '시스템 엔지니어링' },
+    { pattern: /보안|security/i, role: '보안 엔지니어링' },
+    { pattern: /DevOps|SRE|인프라/i, role: 'DevOps/인프라' },
+    { pattern: /모바일|android|ios|앱/i, role: '모바일 개발' },
+  ],
+  analyze(text) {
+    const foundSkills = this.SKILL_DB.filter(s => s.pattern.test(text));
+    const lines = text.split(/\n|\.|\,|。/);
+    const preferredSkills = [], requiredSkills = [];
+    foundSkills.forEach(skill => {
+      const isPref = lines.some(line => skill.pattern.test(line) && this.PREFERRED_HINTS.test(line));
+      if (isPref) preferredSkills.push(skill);
+      else requiredSkills.push(skill);
+    });
+    const top3 = [...requiredSkills, ...preferredSkills].slice(0, 3);
+    const roles = this.ROLE_KEYWORDS.filter(r => r.pattern.test(text)).map(r => r.role);
+    if (!roles.length) roles.push('직무 정보 부족');
+    const levelOrder = { '입문': 1, '중급': 2, '심화': 3 };
+    const studyList = [...requiredSkills, ...preferredSkills]
+      .sort((a, b) => levelOrder[a.level] - levelOrder[b.level])
+      .map((s, i) => ({ rank: i + 1, name: s.name, level: s.level, desc: s.desc }));
+    const parts = [];
+    if (requiredSkills.length) parts.push(`공고 본문에서 ${requiredSkills.map(s=>s.name).join(', ')} 등이 필수 역량으로 언급되었습니다.`);
+    if (preferredSkills.length) parts.push(`"우대" 조건으로 ${preferredSkills.map(s=>s.name).join(', ')}이(가) 명시되어 있습니다.`);
+    const reason = parts.length ? parts.join(' ') : '공고 내용에서 구체적인 기술 키워드를 추출하지 못했습니다. 더 자세히 입력해 주세요.';
+    return {
+      required: requiredSkills.map(s => ({ name: s.name, cat: s.cat, level: s.level })),
+      preferred: preferredSkills.map(s => ({ name: s.name, cat: s.cat, level: s.level })),
+      top3: top3.map(s => s.name),
+      roles, studyList, reason, totalSkills: foundSkills.length
+    };
+  },
+  fitAnalysis(mySkills, analysis) {
+    const norm = mySkills.map(s => s.trim().toLowerCase());
+    const has = name => norm.some(m => m.includes(name.toLowerCase()) || name.toLowerCase().includes(m));
+    const req = analysis.required.map(s => s.name);
+    const pref = analysis.preferred.map(s => s.name);
+    const ownedReq = req.filter(has), missingReq = req.filter(s => !has(s));
+    const ownedPref = pref.filter(has);
+    const reqScore = req.length ? (ownedReq.length / req.length) * 70 : 70;
+    const prefScore = pref.length ? (ownedPref.length / pref.length) * 30 : 30;
+    const fitRate = Math.round(reqScore + prefScore);
+    return { fitRate, ownedRequired: ownedReq, missingRequired: missingReq };
+  },
+  calcDday(endDate) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    return Math.ceil((new Date(endDate) - today) / 86400000);
+  },
+  ddayLabel(endDate) {
+    const d = this.calcDday(endDate);
+    if (d < 0) return `마감`;
+    if (d === 0) return 'D-DAY';
+    return `D-${d}`;
+  },
+  calcStatus(startDate, endDate) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    if (today < new Date(startDate)) return '접수 예정';
+    if (today > new Date(endDate)) return '마감';
+    return '접수 중';
+  }
+};
+
+/* ========== 분석 실행 ========== */
+function runAnalysis() {
+  const input = document.getElementById('jobInput').value.trim();
+  if (!input) { showToast('분석할 내용을 입력해 주세요'); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  const btnText = document.getElementById('btnText');
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinner"></span> 분석 중...';
+
+  setTimeout(() => {
+    const result = Analyzer.analyze(input);
+    renderResult(result);
+    btn.disabled = false;
+    btnText.textContent = '🔍 분석하기';
+    showToast('분석 완료! 🎉');
+  }, 600);
+}
+
+function renderResult(r) {
+  const el = document.getElementById('analysisResult');
+
+  if (r.totalSkills === 0) {
+    el.innerHTML = `<div class="result-empty">인식된 기술 키워드가 없습니다. Python, Java, SQL 등 기술명을 포함해 다시 입력해 보세요.</div>`;
+    return;
+  }
+
+  const topHTML = r.top3.map((t, i) =>
+    `<span class="tag tag-top">🏆 ${i+1}위 ${t}</span>`
+  ).join('');
+
+  const reqHTML = r.required.length
+    ? r.required.map(s => `<span class="tag tag-required">${s.name}</span>`).join('')
+    : '<span style="font-size:12px;color:#aaa;">없음</span>';
+
+  const prefHTML = r.preferred.length
+    ? r.preferred.map(s => `<span class="tag tag-preferred">${s.name}</span>`).join('')
+    : '<span style="font-size:12px;color:#aaa;">없음</span>';
+
+  const roleHTML = r.roles.map(ro => `<span class="tag tag-role">${ro}</span>`).join('');
+
+  const studyRows = r.studyList.slice(0, 8).map(s => `
+    <tr>
+      <td>${s.rank}</td>
+      <td><strong>${s.name}</strong></td>
+      <td><span class="level-badge level-${s.level}">${s.level}</span></td>
+      <td style="font-size:11px;color:var(--text-sub);">${s.desc}</td>
+    </tr>`).join('');
+
+  el.innerHTML = `
+    <div class="result-section">
+      <div class="result-section-title">⭐ 핵심 역량 TOP 3</div>
+      <div class="tag-row">${topHTML}</div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-section-title">✅ 필수 역량</div>
+      <div class="tag-row">${reqHTML}</div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-section-title">➕ 우대 역량</div>
+      <div class="tag-row">${prefHTML}</div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-section-title">💼 예상 업무</div>
+      <div class="tag-row">${roleHTML}</div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-section-title">📚 추천 학습 순서</div>
+      <table class="study-table">
+        <thead>
+          <tr>
+            <th>#</th><th>기술</th><th>난이도</th><th>설명</th>
+          </tr>
+        </thead>
+        <tbody>${studyRows}</tbody>
+      </table>
+    </div>
+
+    <div class="result-section">
+      <div class="result-section-title">📝 분석 근거</div>
+      <div class="reason-text">${r.reason}</div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-section-title">🔍 나의 적합도 분석</div>
+      <div class="fit-section">
+        <div class="fit-input-row">
+          <input type="text" class="fit-input" id="mySkillsInput" placeholder="보유 역량 입력 (예: Python, SQL, Git)" />
+          <button class="fit-btn" onclick="runFit()">분석</button>
+        </div>
+        <div id="fitResult"></div>
+      </div>
+    </div>
+  `;
+
+  // 현재 분석 결과를 전역에 저장 (적합도 분석용)
+  window._lastAnalysis = r;
+}
+
+function runFit() {
+  if (!window._lastAnalysis) { showToast('먼저 공고를 분석해 주세요'); return; }
+  const val = document.getElementById('mySkillsInput').value.trim();
+  if (!val) { showToast('보유 역량을 입력해 주세요'); return; }
+  const mySkills = val.split(',').map(s => s.trim()).filter(Boolean);
+  const fit = Analyzer.fitAnalysis(mySkills, window._lastAnalysis);
+  const barColor = fit.fitRate >= 70 ? '#16a34a' : fit.fitRate >= 40 ? '#d97706' : '#dc2626';
+  const missingHTML = fit.missingRequired.length
+    ? fit.missingRequired.map(s => `<span class="tag tag-top">${s}</span>`).join('')
+    : '<span style="font-size:12px;color:#16a34a;font-weight:600;">🎉 모든 필수 역량 보유!</span>';
+
+  document.getElementById('fitResult').innerHTML = `
+    <div class="fit-result">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:13px;font-weight:700;">적합도</span>
+        <span style="font-size:20px;font-weight:800;color:${barColor};">${fit.fitRate}%</span>
+      </div>
+      <div class="fit-bar-wrap">
+        <div class="fit-bar-fill" style="width:${fit.fitRate}%;background:${barColor};"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:6px;font-weight:600;">부족 역량</div>
+      <div class="tag-row">${missingHTML}</div>
+    </div>`;
+}
+
+/* ========== 마이페이지 사이드 패널 렌더링 ========== */
+function renderSidePanel() {
+  const jobs = Storage.getJobs();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // 마감 임박 (D-7 이내, 접수 중)
+  const urgent = jobs.filter(j => {
+    const d = Analyzer.calcDday(j.endDate);
+    return d >= 0 && d <= 7 && Analyzer.calcStatus(j.startDate, j.endDate) === '접수 중';
+  }).sort((a, b) => Analyzer.calcDday(a.endDate) - Analyzer.calcDday(b.endDate)).slice(0, 4);
+
+  const deadlineEl = document.getElementById('deadlineList');
+  if (urgent.length === 0) {
+    deadlineEl.innerHTML = `
+      <div class="deadline-item" style="justify-content:center;color:var(--text-sub);">
+        마감 임박 공고 없음 👍
+      </div>`;
+  } else {
+    deadlineEl.innerHTML = urgent.map(j => {
+      const d = Analyzer.calcDday(j.endDate);
+      const cls = d <= 2 ? 'dday-urgent' : d <= 5 ? 'dday-warn' : 'dday-safe';
+      return `<div class="deadline-item">
+        <span style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${j.title}</span>
+        <span class="deadline-dday ${cls}">D-${d}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // 즐겨찾기
+  const favs = Storage.getFavorites().slice(0, 2);
+  const favEl = document.getElementById('favList');
+  if (favs.length === 0) {
+    favEl.innerHTML = `<div class="fav-item" style="color:var(--text-sub);">즐겨찾기 없음</div>`;
+  } else {
+    favEl.innerHTML = favs.map(j => `
+      <div class="fav-item">
+        <span class="fav-star">⭐</span>
+        <span class="fav-text">${j.title}</span>
+        <span style="font-size:11px;color:var(--text-sub);">${j.company}</span>
+      </div>`).join('');
+  }
+}
+
+/* ========== 페이지 이동 안내 ========== */
+function showPage(page) {
+  showToast(`${page === 'dashboard' ? '대시보드' : page === 'list' ? '공고 목록' : page === 'register' ? '공고 등록' : page === 'calendar' ? '캘린더' : page === 'stats' ? '통계' : '공고분석'} 페이지로 이동합니다. (index.html에서 구현)`);
+  // 미니 네비 활성화
+  document.querySelectorAll('.mini-nav-btn').forEach(btn => btn.classList.remove('active'));
+}
+
+/* ========== 토스트 ========== */
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+/* ========== 초기화 ========== */
+Storage.insertSampleData();
+renderSidePanel();
+
+// Enter키로 분석 실행
+document.getElementById('jobInput').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') runAnalysis();
+});
+</script>
+</body>
+</html>
